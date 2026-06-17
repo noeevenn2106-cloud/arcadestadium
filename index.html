@@ -95,8 +95,13 @@ canvas{background:var(--bg);border:2px solid var(--border);border-radius:var(--r
 .ttt-cell.win-cell{background:rgba(200,160,74,.18);border-color:var(--accent1);box-shadow:inset 0 0 20px rgba(200,160,74,.15)}
 
 /* ===== CHESS ===== */
-.chess-layout{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
-.chess-board{display:grid;grid-template-columns:repeat(8,1fr);border:2px solid var(--border2);border-radius:8px;overflow:hidden;width:min(384px,92vw)}
+.chess-layout{display:grid;grid-template-columns:90px min(384px,84vw) 90px;gap:14px;justify-content:center;align-items:center;width:100%}
+.chess-board{grid-column:2;display:grid;grid-template-columns:repeat(8,1fr);border:2px solid var(--border2);border-radius:8px;overflow:hidden;width:100%;margin:0 auto}
+@media(max-width:560px){
+  .chess-layout{grid-template-columns:1fr 1fr;justify-content:center}
+  .chess-board{grid-column:1/-1;width:min(384px,92vw);justify-self:center}
+  .chess-layout .captured-box{width:auto}
+}
 .chess-cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:clamp(24px,4.5vw,30px);cursor:pointer;user-select:none;-webkit-user-select:none;position:relative}
 .cl{background:#d4c5a0}.cd{background:#7a5c45}
 .chess-cell.sel{outline:3px solid var(--accent1);outline-offset:-3px}
@@ -404,10 +409,12 @@ canvas{background:var(--bg);border:2px solid var(--border);border-radius:var(--r
     </div>
   </div>
   <div class="chess-layout">
-    <div id="chessBoard" class="chess-board"></div>
     <div class="captured-box">
       <div class="cap-title">Blancs cap.</div><div id="cap-w" class="cap-pieces"></div>
-      <div class="cap-title" style="margin-top:8px;">Noirs cap.</div><div id="cap-b" class="cap-pieces"></div>
+    </div>
+    <div id="chessBoard" class="chess-board"></div>
+    <div class="captured-box">
+      <div class="cap-title">Noirs cap.</div><div id="cap-b" class="cap-pieces"></div>
     </div>
   </div>
 </div>
@@ -510,7 +517,7 @@ canvas{background:var(--bg);border:2px solid var(--border);border-radius:var(--r
     </div>
   </div>
   <canvas id="pongCanvas" width="560" height="360"></canvas>
-  <div class="info-tip">J1 : Z / S &nbsp;|&nbsp; J2 (2 joueurs) : &#8679; / &#8681;</div>
+  <div class="info-tip" id="pong-info-tip">J1 : Z / S ou glisser le doigt &nbsp;|&nbsp; J2 (2 joueurs) : &#8679; / &#8681; ou glisser a droite</div>
 </div>
 
 <!-- JUSTE PRIX -->
@@ -610,6 +617,7 @@ function openGame(id){
 function stopAll(){
   snakePaused=true;
   pongPaused=true;
+  p1TouchY=null;p2TouchY=null;pongDragging=false;
   clearInterval(timerInterval);
   timerRunning=false;
   clearTimeout(reflexTimeout);
@@ -696,7 +704,7 @@ function snakeTick(){
     spawnFood();
   } else { snake.pop(); }
   drawSnake();
-  snakeTimer=setTimeout(snakeTick,Math.max(55,105-sScore*2));
+  snakeTimer=setTimeout(snakeTick,Math.max(95,160-sScore*2));
 }
 function drawSnake(){
   sCtx.fillStyle='#08070e'; sCtx.fillRect(0,0,sc.width,sc.height);
@@ -1068,12 +1076,69 @@ var pc=document.getElementById('pongCanvas');
 var pCtx=pc.getContext('2d');
 var p1y,p2y,bx,by,bvx,bvy,pScore1=0,pScore2=0,pongPaused=false,pongRaf;
 var PH=70,PW=12;
+var p1TouchY=null,p2TouchY=null;
+
+function pongCanvasYFromEvent(clientY){
+  var rect=pc.getBoundingClientRect();
+  var scale=pc.height/rect.height;
+  return (clientY-rect.top)*scale;
+}
+function pongCanvasXFromEvent(clientX){
+  var rect=pc.getBoundingClientRect();
+  var scale=pc.width/rect.width;
+  return (clientX-rect.left)*scale;
+}
+function pongHandleTouches(e){
+  e.preventDefault();
+  var mode=gameConfig.pong.mode;
+  if(mode==='2p'){
+    /* deux joueurs : moitie gauche = J1, moitie droite = J2 */
+    var leftY=null,rightY=null;
+    for(var i=0;i<e.touches.length;i++){
+      var t=e.touches[i];
+      var cx=pongCanvasXFromEvent(t.clientX);
+      var cy=pongCanvasYFromEvent(t.clientY);
+      if(cx<pc.width/2) leftY=cy; else rightY=cy;
+    }
+    p1TouchY=leftY; p2TouchY=rightY;
+  } else {
+    /* robot : tout le canvas controle le J1 */
+    var t0=e.touches[0];
+    p1TouchY=pongCanvasYFromEvent(t0.clientY);
+  }
+}
+function pongHandleMouse(e){
+  if(!pongDragging) return;
+  var cy=pongCanvasYFromEvent(e.clientY);
+  var mode=gameConfig.pong.mode;
+  if(mode==='2p'){
+    var cx=pongCanvasXFromEvent(e.clientX);
+    if(cx<pc.width/2) p1TouchY=cy; else p2TouchY=cy;
+  } else {
+    p1TouchY=cy;
+  }
+}
+var pongDragging=false;
+pc.addEventListener('touchstart',function(e){pongHandleTouches(e);},{passive:false});
+pc.addEventListener('touchmove',function(e){pongHandleTouches(e);},{passive:false});
+pc.addEventListener('touchend',function(e){
+  e.preventDefault();
+  if(e.touches.length===0){p1TouchY=null;p2TouchY=null;}
+  else pongHandleTouches(e);
+},{passive:false});
+pc.addEventListener('mousedown',function(e){pongDragging=true;pongHandleMouse(e);});
+window.addEventListener('mousemove',function(e){pongHandleMouse(e);});
+window.addEventListener('mouseup',function(){pongDragging=false;p1TouchY=null;p2TouchY=null;});
+
 function initPong(){
   if(pongRaf)cancelAnimationFrame(pongRaf);
   p1y=(pc.height-PH)/2;p2y=(pc.height-PH)/2;
   pScore1=0;pScore2=0;pongPaused=false;
+  p1TouchY=null;p2TouchY=null;
   document.getElementById('ps1').textContent=0;
   document.getElementById('ps2').textContent=0;
+  var tip=document.getElementById('pong-info-tip');
+  if(tip) tip.textContent=gameConfig.pong.mode==='2p'?'Glisse a gauche (ou Z/S) pour J1, a droite (ou \u2191/\u2193) pour J2':'Glisse le doigt ou la souris sur le terrain (ou Z/S) pour jouer';
   resetBallPong();pongLoop();
 }
 function resetBallPong(){
@@ -1084,9 +1149,20 @@ function resetBallPong(){
 function pongLoop(){
   if(pongPaused||currentGame!=='pong')return;
   var mode=gameConfig.pong.mode,sp=5.5;
-  if(keys['z']||keys['Z'])p1y=Math.max(8,p1y-sp);
-  if(keys['s']||keys['S'])p1y=Math.min(pc.height-PH-8,p1y+sp);
-  if(mode==='2p'){if(keys['ArrowUp'])p2y=Math.max(8,p2y-sp);if(keys['ArrowDown'])p2y=Math.min(pc.height-PH-8,p2y+sp);}
+  if(p1TouchY!==null){
+    p1y=Math.max(8,Math.min(pc.height-PH-8,p1TouchY-PH/2));
+  }else{
+    if(keys['z']||keys['Z'])p1y=Math.max(8,p1y-sp);
+    if(keys['s']||keys['S'])p1y=Math.min(pc.height-PH-8,p1y+sp);
+  }
+  if(mode==='2p'){
+    if(p2TouchY!==null){
+      p2y=Math.max(8,Math.min(pc.height-PH-8,p2TouchY-PH/2));
+    }else{
+      if(keys['ArrowUp'])p2y=Math.max(8,p2y-sp);
+      if(keys['ArrowDown'])p2y=Math.min(pc.height-PH-8,p2y+sp);
+    }
+  }
   else{var ease=gameConfig.pong.diff==='hard'?.20:gameConfig.pong.diff==='mid'?.13:.07;p2y+=(by-PH/2-p2y)*ease;p2y=Math.max(8,Math.min(pc.height-PH-8,p2y));}
   bx+=bvx;by+=bvy;
   if(by<=8){by=8;bvy=Math.abs(bvy);}
