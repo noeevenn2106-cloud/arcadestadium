@@ -1,0 +1,35 @@
+{
+    "name": "Arcade Stadium",
+    "short_name": "Arcade Stadium",
+    "description": "Multijeu Gratuit et sans pub.",
+    "start_url": "https://noeevenn2106-cloud.github.io/arcadestadium/",
+    "display": "standalone",
+    "background_color": "#070b14",
+    "theme-color": "#070b14",
+    "orientation": "portrait-primary",
+    "icons": [
+      {
+        "src": "icon-192.png",
+        "sizes": "192x192",
+        "type": "image/png"
+      },
+      {
+        "src": "icon-512.png",
+        "sizes": "512x512",
+        "type": "image/png"
+      }
+    ],
+    "theme_color": "#000000",
+    "lang": "fr",
+    "related_applications": [
+      {
+        "platform": "play",
+        "url": "https://noeevenn2106-cloud.github.io/arcadestadium/",
+        "id": ""
+      }
+    ],
+    "categories": [
+      "entertainment",
+      "games"
+    ]
+  }
