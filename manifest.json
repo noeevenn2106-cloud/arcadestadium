@@ -1,7 +1,7 @@
 {
-    "name": "Bio-Conception Protocol",
-    "short_name": "BioSnake",
-    "description": "Simulation microscopique cellulaire.",
+    "name": "Arcade Stadium",
+    "short_name": "Arcade Stadium",
+    "description": "Multijeu Gratuit et sans pub.",
     "start_url": "index.html",
     "display": "standalone",
     "background_color": "#070b14",
